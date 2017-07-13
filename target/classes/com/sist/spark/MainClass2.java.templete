@@ -1,0 +1,90 @@
+package com.sist.spark;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
+import org.apache.spark.streaming.api.java.JavaStreamingContext;
+import org.apache.spark.streaming.twitter.TwitterUtils;
+
+import com.sist.rank.RankData;
+
+import twitter4j.Status;
+
+import java.util.*;
+
+public class MainClass2 {
+
+	public static void main(String[] args) {
+		try {
+			SparkConf conf=new SparkConf().setAppName("Twitter").setMaster("local[2]");//stream에서는 local 2이상을 줘야 데이터를 가져온다.
+			String[] filter={
+				"",
+				"",
+				"",
+				""
+			};
+			
+			JavaStreamingContext jsc=new JavaStreamingContext(conf, new Duration(10000));
+			
+			String[] prop={
+				"twitter4j.oauth.consumerKey",
+				"twitter4j.oauth.consumerSecret",
+				"twitter4j.oauth.accessToken",
+				"twitter4j.oauth.accessTokenSecret"
+					
+			};			
+			for (int a = 0; a < prop.length; a++) {
+				System.setProperty(prop[a], filter[a]);
+				
+			}
+			
+			List<String> list=RankData.daumRank();
+			String[] data=new String[list.size()];
+			int a=0;
+			for (String s : list) {
+				data[a]=s;
+				System.out.println(data[a]);
+				a++;
+			}
+			
+			/*
+			 * 
+	<dependency>
+	    <groupId>org.apache.spark</groupId>
+	    <artifactId>spark-streaming_2.10</artifactId>
+	    <version>1.6.2</version>
+	    <scope>provided</scope>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/org.apache.spark/spark-streaming-twitter_2.10 -->
+	<dependency>
+	    <groupId>org.apache.spark</groupId>
+	    <artifactId>spark-streaming-twitter_2.10</artifactId>
+	    <version>1.6.2</version>
+	</dependency>
+			 * */
+			JavaReceiverInputDStream<Status> twitterStream=TwitterUtils.createStream(jsc, data);//data는 찾는 data
+			
+			JavaDStream<String> status=twitterStream.map(new Function<Status, String>() {
+				//status를 하나씩 받아온다.
+				public String call(Status status) throws Exception {
+					
+					return status.getText();
+				}
+				
+			});
+			
+			status.print();
+			jsc.start();
+			jsc.awaitTermination();
+					
+			
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		
+	}
+
+}
